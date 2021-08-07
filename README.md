@@ -4,9 +4,10 @@ Experimental cooperative threading library for Gameboy Advance in pure C. See co
 
 # API
 
-`co_create_thread(thread_function)`
+`co_thread_create(thread_function, config)`
 
-Create a thread, with entry point specified in thread_function. Returns 1 upon failure.
+Create a thread, with entry point specified in thread_function. For more
+settings, optionally pass a config struct.
 
 
 `co_thread_yield();`

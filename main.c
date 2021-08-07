@@ -50,8 +50,10 @@ int main()
     pal_bg_bank[4][14]= CLR_GRAY;
 
 
-    if (co_thread_create(task_thread) == 0) {
-        tte_write("created thread!\n");
+    co_thread task = co_thread_create(task_thread, NULL);
+    co_thread task2 = co_thread_create(task_thread, NULL);
+    if (task && task2) {
+        tte_write("created threads!\n");
     } else {
         tte_write("thread create failed!\n");
         return 1;
@@ -65,7 +67,8 @@ int main()
 
     tte_write("main thread resumed\n");
 
-    co_thread_yield();
+    co_thread_join(task);
+    co_thread_join(task2);
 
     assert(++counter == 6, "bad stack");
 
