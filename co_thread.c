@@ -22,7 +22,7 @@ struct __jmp_buf_decoded {
     uint32_t fp_;
     uint32_t pc_;
     uint32_t sp_;
-    uint32_t unknown_cupset_1_[11];
+    uint32_t unknown_cpuset_1_[11];
 };
 
 
@@ -189,9 +189,10 @@ co_thread co_thread_create(co_thread_fn entry_point,
     __jmp_buf_set_sp((struct __jmp_buf_decoded*)&thread->cpu_state_,
                      // The stack follows the struct members, see the definition
                      // of co_ThreadInfo.
-                     thread + sizeof(co_ThreadInfo)
+                     ((unsigned char*)thread) + sizeof(co_ThreadInfo)
                      // Stack starts at end.
                      + stack_size);
+
 
     thread->next_ = co_thread_list;
     co_thread_list = thread;

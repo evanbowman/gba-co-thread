@@ -11,7 +11,7 @@
 typedef void* co_thread;
 
 
-typedef void (*co_thread_fn)(void);
+typedef void (*co_thread_fn)();
 
 
 
