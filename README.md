@@ -17,4 +17,4 @@ Suspend execution, switching to a different thread.
 
 `co_thread_exit();`
 
-Clean up a thread's resources. Must be called before a thread returns from it's entry function.
+Clean up a thread's resources. Must be called before a thread returns from its entry function.
