@@ -1,5 +1,12 @@
 #pragma once
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 #include <stdint.h>
 
 
@@ -122,7 +129,6 @@ void* co_thread_arg();
 
 
 
-
 ////////////////////////////////////////////////////////////////////////////////
 //
 // co_thread_join()
@@ -172,3 +178,9 @@ void co_sem_wait(co_Semaphore* sem);
 void co_sem_post(co_Semaphore* sem);
 //
 ////////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifdef __cplusplus
+}
+#endif
