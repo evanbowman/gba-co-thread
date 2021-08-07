@@ -5,14 +5,24 @@
 
 
 
+#define assert(COND, MSG)                           \
+    if (!(COND)) {tte_write(MSG); while (true);}    \
+
+
 
 void task_thread()
 {
+    int counter = 0;
+
     tte_write("hello from a thread! :)\n");
 
     co_thread_yield();
 
+    assert(++counter == 1, "bad stack");
+
     tte_write("task thread resumed\n");
+
+    assert(++counter == 2, "bad stack");
 
     co_thread_exit();
 }
@@ -49,12 +59,17 @@ int main()
         return 1;
     }
 
+    int counter = 0;
 
     co_thread_yield();
+
+    assert(++counter == 1, "bad stack");
 
     tte_write("main thread resumed\n");
 
     co_thread_yield();
+
+    assert(++counter == 2, "bad stack");
 
     tte_write("main thread resumed again\n");
 }
