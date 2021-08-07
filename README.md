@@ -28,3 +28,4 @@ Clean up a thread's resources. Must be called before a thread returns from its e
 
 See main.c for a set of examples. The first test passes exectution back and forth between three threads, while incrementing local variable counters, to demonstrate that threads have their own stacks. The second test spawns a bunch of consumer threads, which wait on a semaphore supplied by the main producer thread.
 
+<img src="example.png"/>
