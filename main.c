@@ -115,9 +115,10 @@ int sem_test()
 
     tte_write("producer start\n");
 
-    for (int i = 0; i < sem_thrd_count; ++i) {
+    for (int i = 0; i < sem_thrd_count / 2; ++i) {
         co_sem_post(&sem);
-        tte_write("produce!\n");
+        co_sem_post(&sem);
+        tte_write("produce 2\n");
         co_thread_yield();
     }
 
