@@ -313,6 +313,9 @@ void co_thread_cond_wait(int (*cond)(void*), void* cond_arg)
     co_current_thread->wait_cond_arg_ = cond_arg;
 
     co_thread_yield();
+
+    co_current_thread->wait_cond_ = NULL;
+    co_current_thread->wait_cond_arg_ = NULL;
 }
 
 
