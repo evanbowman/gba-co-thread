@@ -495,7 +495,7 @@ void co_sem_wait(co_Semaphore* sem)
 
 
 
-void co_sem_yield(co_Semaphore* sem)
+void co_sem_post(co_Semaphore* sem)
 {
     sem->value_++;
 }

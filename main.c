@@ -10,6 +10,13 @@
 
 
 
+////////////////////////////////////////////////////////////////////////////////
+//
+// 1) A basic test, just yields back and forth between threads
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
 void task_thread()
 {
     int counter = 0;
@@ -24,6 +31,108 @@ void task_thread()
 
     co_thread_exit();
 }
+
+
+
+int basic_test()
+{
+    co_thread task = co_thread_create(task_thread, NULL, NULL);
+    co_thread task2 = co_thread_create(task_thread, NULL, NULL);
+    if (task && task2) {
+        tte_write("created threads!\n");
+    } else {
+        tte_write("thread create failed!\n");
+        return 1;
+    }
+
+    int counter = 4;
+
+    co_thread_yield();
+
+    assert(++counter == 5, "bad stack");
+
+    tte_write("main thread resumed\n");
+
+    co_thread_join(task);
+    co_thread_join(task2);
+
+    assert(++counter == 6, "bad stack");
+
+    tte_write("main thread resumed again\n");
+
+    return 0;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// 2) Semaphore producer/consumer example
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+void sem_test_task()
+{
+    co_Semaphore* sem = co_thread_arg();
+
+    co_sem_wait(sem);
+
+    tte_write("consume, thread done!\n");
+
+    co_thread_exit();
+}
+
+
+
+int sem_test()
+{
+    tte_write("\nproducer/consumer sem test:\n");
+
+    co_Semaphore sem;
+    co_sem_init(&sem, 0);
+
+    enum {
+        sem_thrd_count = 4
+    };
+
+    co_thread threads[sem_thrd_count];
+
+    for (int i = 0; i < sem_thrd_count; ++i) {
+
+        threads[i] = co_thread_create(sem_test_task, &sem, NULL);
+
+        if (!threads[i]) {
+            tte_write("thread create failed");
+            return 1;
+        }
+    }
+
+    for (int i = 0; i < 100; ++i) {
+        // Just to demonstrate that the sem threads are in fact blocked on the
+        // semaphore.
+        co_thread_yield();
+    }
+
+    tte_write("producer start\n");
+
+    for (int i = 0; i < sem_thrd_count; ++i) {
+        co_sem_post(&sem);
+        tte_write("produce!\n");
+        co_thread_yield();
+    }
+
+    for (int i = 0; i < sem_thrd_count; ++i) {
+        co_thread_join(threads[i]);
+    }
+
+    tte_write("sem test success");
+
+    return 0;
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -50,27 +159,7 @@ int main()
     pal_bg_bank[4][14]= CLR_GRAY;
 
 
-    co_thread task = co_thread_create(task_thread, NULL, NULL);
-    co_thread task2 = co_thread_create(task_thread, NULL, NULL);
-    if (task && task2) {
-        tte_write("created threads!\n");
-    } else {
-        tte_write("thread create failed!\n");
-        return 1;
-    }
+    basic_test();
 
-    int counter = 4;
-
-    co_thread_yield();
-
-    assert(++counter == 5, "bad stack");
-
-    tte_write("main thread resumed\n");
-
-    co_thread_join(task);
-    co_thread_join(task2);
-
-    assert(++counter == 6, "bad stack");
-
-    tte_write("main thread resumed again\n");
+    sem_test();
 }
