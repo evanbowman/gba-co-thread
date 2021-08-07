@@ -44,14 +44,36 @@ static inline void __jmp_buf_set_sp(struct __jmp_buf_decoded* info, void* addr)
 
 
 
+typedef enum co_ThreadInfo_Flag {
+    // The thread was allocated on the heap, and must be freed
+    co_threadinfo_flag_requires_free = (1 << 0),
+
+    // ...
+} co_ThreadInfo_Flag;
+
+
+
 typedef struct co_ThreadInfo {
     jmp_buf cpu_state_;
-    struct co_ThreadInfo* next_;
 
-    bool requires_free_;
+    // Arg passed to the created thread.
+    void* arg_;
+
+    // Threads stored in an intrusive list.
+    struct co_ThreadInfo* next_;
 
     int (*wait_cond_)(void*);
     void* wait_cond_arg_;
+
+    co_ThreadInfo_Flag flags_;
+
+    // NOTE: required for stack alignment purposes. ARM expects the stack to be
+    // eight-byte aligned, I think.
+
+    // NOTE: The ThreadInfo is already the correct size to produce eight byte
+    // alignment in the stack. If variables are added, padding may need to be
+    // specified.
+    // char pad_[?];
 
     // Stack might be appended to the end of the ThreadInfo struct. Or it might
     // not be, if we're the main thread.
@@ -74,13 +96,20 @@ static co_ThreadInfo* co_completed_threads;
 
 
 
+static void co_thread_cleanup(co_ThreadInfo* thread)
+{
+    if (thread->flags_ & co_threadinfo_flag_requires_free) {
+        free(thread);
+    }
+}
+
+
+
 static void co_completed_collect()
 {
     while (co_completed_threads) {
         co_ThreadInfo* next = co_completed_threads->next_;
-        if (co_completed_threads->requires_free_) {
-            free(co_completed_threads);
-        }
+        co_thread_cleanup(co_completed_threads);
         co_completed_threads = next;
     }
 }
@@ -144,6 +173,7 @@ static void co_schedule()
 
 
 co_thread co_thread_create(co_thread_fn entry_point,
+                           void* arg,
                            co_ThreadConfiguration* config)
 {
     if (co_thread_list == NULL) {
@@ -157,13 +187,30 @@ co_thread co_thread_create(co_thread_fn entry_point,
         // it'll be initialized when we first call co_thread_yield().
     }
 
+    if (sizeof(co_ThreadInfo) % 8 != 0) {
+        // We will be appending the stack after the co_ThreadInfo struct. Make
+        // sure that the size of the co_ThreadInfo will produce the correct
+        // alignment.
+        return NULL;
+    }
+
     uint32_t stack_size;
     co_ThreadInfo* thread = NULL;
 
     if (config) {
         stack_size = config->stack_size_;
+
+        if (config->stack_size_ % 8 != 0) {
+            // Stack size will not produce the correct alignment.
+            return NULL;
+        }
+
         if (config->memory_) {
             thread = config->memory_;
+            if ((intptr_t)config->memory_ % 8 != 0) {
+                // Misaligned stack.
+                return NULL;
+            }
         }
     } else {
         stack_size = CO_THREAD_STACK_SIZE;
@@ -171,12 +218,22 @@ co_thread co_thread_create(co_thread_fn entry_point,
 
     if (thread == NULL) {
         thread = malloc(sizeof(co_ThreadInfo) + stack_size);
-        thread->requires_free_ = true;
+        if (thread) {
+            thread->flags_ = co_threadinfo_flag_requires_free;
+        }
     } else {
-        thread->requires_free_ = false;
+        thread->flags_ = 0;
     }
 
     if (thread == NULL) {
+        return NULL;
+    }
+
+    thread->arg_ = arg;
+
+    if ((intptr_t)((unsigned char*)thread + sizeof *thread) % 8 != 0) {
+        // Arm requires an eight byte stack alignment
+        co_thread_cleanup(thread);
         return NULL;
     }
 
@@ -213,20 +270,29 @@ co_thread co_thread_create(co_thread_fn entry_point,
 void co_thread_yield()
 {
     if (co_thread_list == NULL) {
-        // There is only one thread, the main thread. Nothing to switch to.
+        // We haven't created any threads yet.
         return;
     }
 
-    const int resumed = setjmp(co_current_thread->cpu_state_);
+    co_ThreadInfo* this_thread = co_current_thread;
+
+    co_schedule(); // Sets co_current_thread.
+
+    if (this_thread == co_current_thread) {
+        // Just an optimization, allowing us to skip the call to setjmp() if
+        // other threads are not ready to run.
+        return;
+    }
+
+    const int resumed = setjmp(this_thread->cpu_state_);
 
     if (resumed) {
+        co_current_thread = this_thread;
         // Another thread has resumed, now we can free up a previously exited
         // thread.
         co_on_resume();
         return;
     }
-
-    co_schedule();
 
     longjmp(co_current_thread->cpu_state_, 1);
 }
@@ -280,6 +346,24 @@ void co_thread_resume(co_thread thread)
     co_current_thread = thread;
 
     longjmp(co_current_thread->cpu_state_, 1);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// co_thread_arg
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+void* co_thread_arg()
+{
+    if (co_current_thread) {
+        return co_current_thread->arg_;
+    }
+
+    return NULL;
 }
 
 

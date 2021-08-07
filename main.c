@@ -50,8 +50,8 @@ int main()
     pal_bg_bank[4][14]= CLR_GRAY;
 
 
-    co_thread task = co_thread_create(task_thread, NULL);
-    co_thread task2 = co_thread_create(task_thread, NULL);
+    co_thread task = co_thread_create(task_thread, NULL, NULL);
+    co_thread task2 = co_thread_create(task_thread, NULL, NULL);
     if (task && task2) {
         tte_write("created threads!\n");
     } else {

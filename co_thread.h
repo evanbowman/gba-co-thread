@@ -22,11 +22,12 @@ typedef void (*co_thread_fn)();
 // Used to pass configuration settings to co_thread_create.
 //
 typedef struct co_ThreadConfiguration {
-    // Size of the thread's stack.
+
+    // Size of the thread's stack. Must be a multiple of eight bytes.
     uint32_t stack_size_;
 
     // Optionally provide memory for the thread's header and stack. If null, the
-    // system will call malloc.
+    // system will call malloc. If specified, must be eight-byte aligned.
     void* memory_;
 
 } co_ThreadConfiguration;
@@ -39,10 +40,13 @@ typedef struct co_ThreadConfiguration {
 //
 // co_thread_create(entry_point)
 //
-// Create a thread, with entry point supplied by co_thread_fn. Optionally
-// specify aditional settings in the config parameter.
+// Create a thread, with entry point supplied in `entry_point`. You may attach
+// an argument to the thread in `arg`, which may be retrieved by calling
+// `co_thread_arg()`. Optionally specify aditional settings in the config
+// parameter.
 //
 co_thread co_thread_create(co_thread_fn entry_point,
+                           void* arg,
                            co_ThreadConfiguration* config);
 //
 ////////////////////////////////////////////////////////////////////////////////
@@ -66,7 +70,8 @@ void co_thread_yield();
 //
 // co_thread_resume(thread)
 //
-// Yield and transfer control to a specific thread.
+// Yield and transfer control to a specific thread. Will return immediately if
+// the thread is blocked on a condition.
 //
 void co_thread_resume(co_thread thread);
 //
@@ -78,7 +83,8 @@ void co_thread_resume(co_thread thread);
 //
 // co_thread_cond_wait(thread)
 //
-// Yield, do not schedule the thread until condition evaluates to true.
+// Yield, do not schedule the thread until `cond(cond_arg)` evaluates to
+// nonzero.
 //
 void co_thread_cond_wait(int (*cond)(void*), void* cond_arg);
 //
@@ -99,6 +105,18 @@ void co_thread_cond_wait(int (*cond)(void*), void* cond_arg);
 // the main thread.
 //
 void co_thread_exit();
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// co_thread_arg()
+//
+// Retrieve the argument passed to co_thread_create().
+//
+void* co_thread_arg();
 //
 ////////////////////////////////////////////////////////////////////////////////
 
