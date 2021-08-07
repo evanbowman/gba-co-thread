@@ -28,9 +28,9 @@ struct __jmp_buf_decoded {
 
 
 // Defined to avoid pedantic errors about type-punned ptr dereference.
-static inline void __jmp_buf_set_pc(struct __jmp_buf_decoded* info, void* addr)
+static inline void __jmp_buf_set_pc(struct __jmp_buf_decoded* info, uint32_t addr)
 {
-    info->pc_ = (intptr_t)addr;
+    info->pc_ = addr;
 }
 
 
@@ -242,7 +242,7 @@ co_thread co_thread_create(co_thread_fn entry_point,
     setjmp(thread->cpu_state_);
 
     __jmp_buf_set_pc((struct __jmp_buf_decoded*)&thread->cpu_state_,
-                     (void*)entry_point);
+                     (intptr_t)entry_point);
     __jmp_buf_set_sp((struct __jmp_buf_decoded*)&thread->cpu_state_,
                      // The stack follows the struct members, see the definition
                      // of co_ThreadInfo.

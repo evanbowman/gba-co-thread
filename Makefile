@@ -27,9 +27,9 @@ INCLUDES	:=
 #---------------------------------------------------------------------------------
 ARCH	:=	-mthumb -mthumb-interwork
 
-CFLAGS	:=	-g -Wall -O2 \
+CFLAGS	:=	-g -Wall -Werror -pedantic -O2 \
 			-mcpu=arm7tdmi -mtune=arm7tdmi\
- 			-fomit-frame-pointer\
+ 			-fomit-frame-pointer \
 			-ffast-math \
 			$(ARCH)
 
