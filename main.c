@@ -14,7 +14,7 @@ void task_thread()
 
     tte_write("task thread resumed\n");
 
-    while (1) ;
+    co_thread_exit();
 }
 
 
@@ -55,4 +55,6 @@ int main()
     tte_write("main thread resumed\n");
 
     co_thread_yield();
+
+    tte_write("main thread resumed again\n");
 }
