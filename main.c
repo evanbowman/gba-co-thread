@@ -22,8 +22,6 @@ void task_thread()
 
     tte_write("task thread resumed\n");
 
-    assert(++counter == 2, "bad stack");
-
     co_thread_exit();
 }
 
