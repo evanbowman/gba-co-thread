@@ -1,7 +1,7 @@
 #include <setjmp.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "co_thread.h"
 
@@ -47,6 +47,12 @@ static inline void __jmp_buf_set_sp(struct __jmp_buf_decoded* info, void* addr)
 typedef struct co_ThreadInfo {
     jmp_buf cpu_state_;
     struct co_ThreadInfo* next_;
+
+    bool requires_free_;
+
+    int (*wait_cond_)(void*);
+    void* wait_cond_arg_;
+
     // Stack might be appended to the end of the ThreadInfo struct. Or it might
     // not be, if we're the main thread.
     // u8 stack_[CO_THREAD_STACK_SIZE];
@@ -72,7 +78,9 @@ static void co_completed_collect()
 {
     while (co_completed_threads) {
         co_ThreadInfo* next = co_completed_threads->next_;
-        free(co_completed_threads);
+        if (co_completed_threads->requires_free_) {
+            free(co_completed_threads);
+        }
         co_completed_threads = next;
     }
 }
@@ -93,6 +101,34 @@ static void co_on_resume()
             // crt0 created the main thread, not this library. We cannot make
             // any assumptions about the main thread's stack size.
             co_thread_exit();
+        }
+    }
+}
+
+
+
+static int co_thread_ready(co_ThreadInfo* info)
+{
+    if (info->wait_cond_ && !info->wait_cond_(info->wait_cond_arg_)) {
+        return 0;
+    }
+    return 1;
+}
+
+
+
+static void co_schedule()
+{
+    while (1) {
+        co_current_thread = co_current_thread->next_;
+
+        if (co_current_thread == NULL) {
+            // Wrap around
+            co_current_thread = co_thread_list;
+        }
+
+        if (co_thread_ready(co_current_thread)) {
+            return;
         }
     }
 }
@@ -122,14 +158,23 @@ co_thread co_thread_create(co_thread_fn entry_point,
     }
 
     uint32_t stack_size;
+    co_ThreadInfo* thread = NULL;
 
     if (config) {
         stack_size = config->stack_size_;
+        if (config->memory_) {
+            thread = config->memory_;
+        }
     } else {
         stack_size = CO_THREAD_STACK_SIZE;
     }
 
-    co_ThreadInfo* thread = malloc(sizeof(co_ThreadInfo) + stack_size);
+    if (thread == NULL) {
+        thread = malloc(sizeof(co_ThreadInfo) + stack_size);
+        thread->requires_free_ = true;
+    } else {
+        thread->requires_free_ = false;
+    }
 
     if (thread == NULL) {
         return NULL;
@@ -180,14 +225,27 @@ void co_thread_yield()
         return;
     }
 
-    co_current_thread = co_current_thread->next_;
-
-    if (co_current_thread == NULL) {
-        // Wrap around
-        co_current_thread = co_thread_list;
-    }
+    co_schedule();
 
     longjmp(co_current_thread->cpu_state_, 1);
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// co_thread_cond_wait
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+void co_thread_cond_wait(int (*cond)(void*), void* cond_arg)
+{
+    co_current_thread->wait_cond_ = cond;
+    co_current_thread->wait_cond_arg_ = cond_arg;
+
+    co_thread_yield();
 }
 
 
@@ -203,6 +261,11 @@ void co_thread_yield()
 void co_thread_resume(co_thread thread)
 {
     if (co_thread_list == NULL) {
+        return;
+    }
+
+    if (!co_thread_ready(thread)) {
+        // Raise error instead?
         return;
     }
 
@@ -274,7 +337,7 @@ void co_thread_exit()
 
 void co_thread_join(co_thread thread)
 {
-    while (true) {
+    while (1) {
         co_ThreadInfo* iter = co_thread_list;
         while (iter) {
             if (iter == thread) {
@@ -315,15 +378,22 @@ void co_sem_init(co_Semaphore* sem, int value)
 
 
 
+static int co_sem_wait_cond(void* sem)
+{
+    return ((co_Semaphore*)sem)->value_ != 0;
+}
+
+
+
 void co_sem_wait(co_Semaphore* sem)
 {
-    while (true) {
+    while (1) {
         if (sem->value_ > 0) {
             sem->value_--;
             return;
         }
 
-        co_thread_yield();
+        co_thread_cond_wait(co_sem_wait_cond, sem);
     }
 }
 

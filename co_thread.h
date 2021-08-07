@@ -11,7 +11,7 @@
 typedef void* co_thread;
 
 
-typedef void (*co_thread_fn)(void*);
+typedef void (*co_thread_fn)(void);
 
 
 
@@ -22,7 +22,13 @@ typedef void (*co_thread_fn)(void*);
 // Used to pass configuration settings to co_thread_create.
 //
 typedef struct co_ThreadConfiguration {
+    // Size of the thread's stack.
     uint32_t stack_size_;
+
+    // Optionally provide memory for the thread's header and stack. If null, the
+    // system will call malloc.
+    void* memory_;
+
 } co_ThreadConfiguration;
 //
 ////////////////////////////////////////////////////////////////////////////////
@@ -70,6 +76,18 @@ void co_thread_resume(co_thread thread);
 
 ////////////////////////////////////////////////////////////////////////////////
 //
+// co_thread_cond_wait(thread)
+//
+// Yield, do not schedule the thread until condition evaluates to true.
+//
+void co_thread_cond_wait(int (*cond)(void*), void* cond_arg);
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
 // co_thread_exit()
 //
 // The only correct way to stop a co_thread. In the future, this library might
@@ -83,6 +101,7 @@ void co_thread_resume(co_thread thread);
 void co_thread_exit();
 //
 ////////////////////////////////////////////////////////////////////////////////
+
 
 
 
