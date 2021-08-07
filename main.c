@@ -59,17 +59,17 @@ int main()
         return 1;
     }
 
-    int counter = 0;
+    int counter = 4;
 
     co_thread_yield();
 
-    assert(++counter == 1, "bad stack");
+    assert(++counter == 5, "bad stack");
 
     tte_write("main thread resumed\n");
 
     co_thread_yield();
 
-    assert(++counter == 2, "bad stack");
+    assert(++counter == 6, "bad stack");
 
     tte_write("main thread resumed again\n");
 }
