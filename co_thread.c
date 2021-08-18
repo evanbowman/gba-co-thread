@@ -13,6 +13,7 @@ enum {
 
 
 
+#ifdef __GBA__
 // I managed to reverse-engineer the layout of the jmp_buf in
 // arm-none-eabi-gcc. All we really care about, are the program counter, and the
 // stack pointer... let's hope the arm toolchain doesn't change its
@@ -24,6 +25,23 @@ struct __jmp_buf_decoded {
     uint32_t sp_;
     uint32_t unknown_cpuset_1_[11];
 };
+#elif __RP_PICO_2040__
+struct __jmp_buf_decoded {
+    uint32_t unknown_cpuset_0_[8];
+    uint32_t sp_;
+    uint32_t pc_;
+    uint32_t fp_;
+};
+#else
+#warning "ARCH not set, defaulting to GBA"
+struct __jmp_buf_decoded {
+    uint32_t unknown_cpuset_0_[9];
+    uint32_t fp_;
+    uint32_t pc_;
+    uint32_t sp_;
+    uint32_t unknown_cpuset_1_[11];
+};
+#endif
 
 
 
@@ -228,6 +246,9 @@ co_thread co_thread_create(co_thread_fn entry_point,
     if (thread == NULL) {
         return NULL;
     }
+
+    thread->wait_cond_ = NULL;
+    thread->wait_cond_arg_ = NULL;
 
     thread->arg_ = arg;
 

@@ -31,7 +31,8 @@ CFLAGS	:=	-g -Wall -Werror -pedantic -O2 \
 			-mcpu=arm7tdmi -mtune=arm7tdmi\
  			-fomit-frame-pointer \
 			-ffast-math \
-			$(ARCH)
+			$(ARCH) \
+			-D__GBA__
 
 CFLAGS	+=	$(INCLUDE)
 
