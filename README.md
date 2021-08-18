@@ -1,6 +1,6 @@
 # gba-co-thread
 
-Experimental cooperative threading library for Gameboy Advance in pure C. See co_thread.h and co_thread.c for the tiny threading library. See main.c for an example. 
+Experimental cooperative threading library for ARM processors in pure C. See co_thread.h and co_thread.c for the tiny threading library. See main.c for an example. Originally implemented for the Gameboy Advance, I've since created bindings for other ARM CPUs, like the ARM Cortex M0 (tested on RP2040).
 
 
 # API
